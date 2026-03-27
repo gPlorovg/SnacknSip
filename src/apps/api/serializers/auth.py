@@ -93,7 +93,11 @@ class TelegramLoginSerializer(serializers.Serializer):
     """
 
     event_code = serializers.CharField()
-    telegram_id = serializers.IntegerField()
+    telegram_id = serializers.IntegerField(
+        required=False,
+        allow_null=True,
+        help_text="Telegram user ID. Всегда положительное целое число.",
+    )
     telegram_username = serializers.CharField(
         required=False,
         allow_blank=True,
@@ -102,7 +106,7 @@ class TelegramLoginSerializer(serializers.Serializer):
 
     def validate(self, data):
         event_code = data["event_code"]
-        telegram_id = data["telegram_id"]
+        telegram_id = data.get("telegram_id")  # may be None
         telegram_username = data.get("telegram_username", "").strip().lstrip("@")
 
         # Find event
@@ -115,9 +119,12 @@ class TelegramLoginSerializer(serializers.Serializer):
             raise serializers.ValidationError({"event_code": "Мероприятие закрыто."})
 
         # 1. Fast path: find by telegram_id (repeat visitor)
-        event_user = EventUser.objects.filter(
-            event=event, telegram_id=telegram_id
-        ).first()
+        # Telegram IDs are always positive integers — skip if 0, None or falsy
+        event_user = None
+        if telegram_id and telegram_id > 0:
+            event_user = EventUser.objects.filter(
+                event=event, telegram_id=telegram_id
+            ).first()
 
         # 2. First visit: find by telegram_username, link telegram_id
         if not event_user and telegram_username:

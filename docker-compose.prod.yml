@@ -1,0 +1,110 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: always
+    env_file:
+      - .env.prod
+    environment:
+      POSTGRES_DB: ${DB_NAME:-snacknsip}
+      POSTGRES_USER: ${DB_USER:-snacknsip}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-snacknsip}
+    volumes:
+      - postgres_prod_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    restart: always
+    volumes:
+      - redis_prod_data:/data
+
+  minio:
+    image: minio/minio:latest
+    restart: always
+    environment:
+      MINIO_ROOT_USER: ${MINIO_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_PASSWORD:-minioadmin}
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_prod_data:/data
+
+  minio_init:
+    image: minio/mc:latest
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      sleep 5;
+      mc alias set local http://minio:9000 ${MINIO_USER:-minioadmin} ${MINIO_PASSWORD:-minioadmin};
+      mc mb --ignore-existing local/menu-images;
+      mc anonymous set public local/menu-images;
+      exit 0;
+      "
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: always
+    env_file:
+      - .env.prod
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.settings.prod
+      - DB_HOST=db
+      - REDIS_URL=redis://redis:6379/0
+      - MINIO_URL=http://minio:9000
+    volumes:
+      - static_volume:/app/staticfiles
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+      - redis
+    command: ["/app/entrypoint.sh", "gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "3"]
+
+  worker:
+    build:
+      context: .
+    restart: always
+    env_file:
+      - .env.prod
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.settings.prod
+      - DB_HOST=db
+      - REDIS_URL=redis://redis:6379/0
+      - MINIO_URL=http://minio:9000
+    depends_on:
+      - db
+      - redis
+    command: ["celery", "-A", "config", "worker", "-l", "info", "--concurrency", "2"]
+
+  beat:
+    build:
+      context: .
+    restart: always
+    env_file:
+      - .env.prod
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.settings.prod
+      - DB_HOST=db
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - db
+      - redis
+    command: ["celery", "-A", "config", "beat", "-l", "info"]
+
+  nginx:
+    image: nginx:1.25-alpine
+    restart: always
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - static_volume:/app/staticfiles:ro
+    ports:
+      - "80:80"
+    depends_on:
+      - web
+
+volumes:
+  postgres_prod_data:
+  redis_prod_data:
+  minio_prod_data:
+  static_volume:

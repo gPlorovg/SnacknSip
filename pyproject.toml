@@ -17,6 +17,7 @@ dependencies = [
     "qrcode[pil]>=7.4",
     "Pillow>=10.0",
     "cryptography>=42.0",
+    "gunicorn>=22.0",
 ]
 
 [tool.ruff]

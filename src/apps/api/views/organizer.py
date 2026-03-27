@@ -9,6 +9,7 @@ from apps.api.auth.permissions import IsOrganizer
 from apps.api.models import Event, EventGuest, Menu, MenuItem, Order, Stall
 from apps.api.models.guest_roles import GuestRole, GuestRoleItem
 from apps.api.models.users import EventUser
+from drf_spectacular.utils import OpenApiExample
 from apps.api.serializers.organizer import (
     AssignRoleSerializer,
     BlockUserSerializer,
@@ -47,7 +48,22 @@ class EventListView(APIView):
     permission_classes = [IsOrganizer]
 
     @extend_schema(
-        summary="Мои мероприятия", responses={200: EventSerializer(many=True)}
+        summary="Мои мероприятия",
+        responses={200: EventSerializer(many=True)},
+        examples=[
+            OpenApiExample(
+                name="Список мероприятий",
+                value=[
+                    {
+                        "id": 1,
+                        "code": "TECH24",
+                        "name": "IT Conf 2024",
+                        "is_active": True,
+                    }
+                ],
+                response_only=True,
+            )
+        ],
     )
     def get(self, request):
         events = Event.objects.filter(organizer=request.user).order_by("-created_at")
@@ -57,6 +73,13 @@ class EventListView(APIView):
         summary="Создать мероприятие",
         request=EventCreateSerializer,
         responses={201: EventSerializer},
+        examples=[
+            OpenApiExample(
+                name="Создание",
+                value={"code": "NEWYEAR", "name": "Новый Год"},
+                request_only=True,
+            )
+        ],
     )
     def post(self, request):
         serializer = EventCreateSerializer(data=request.data)
@@ -71,7 +94,22 @@ class EventListView(APIView):
 class EventDetailView(APIView):
     permission_classes = [IsOrganizer]
 
-    @extend_schema(summary="Детали мероприятия", responses={200: EventSerializer})
+    @extend_schema(
+        summary="Детали мероприятия",
+        responses={200: EventSerializer},
+        examples=[
+            OpenApiExample(
+                name="Детали",
+                value={
+                    "id": 1,
+                    "code": "TECH24",
+                    "name": "IT Conf 2024",
+                    "is_active": True,
+                },
+                response_only=True,
+            )
+        ],
+    )
     def get(self, request, event_id):
         event = _get_event(request, event_id)
         if not event:
@@ -84,6 +122,13 @@ class EventDetailView(APIView):
         summary="Обновить мероприятие",
         request=EventCreateSerializer,
         responses={200: EventSerializer},
+        examples=[
+            OpenApiExample(
+                name="Обновление",
+                value={"name": "IT Conf 2024 - Day 2"},
+                request_only=True,
+            )
+        ],
     )
     def patch(self, request, event_id):
         event = _get_event(request, event_id)
@@ -97,7 +142,23 @@ class EventDetailView(APIView):
         return Response(EventSerializer(event).data)
 
 
-@extend_schema(tags=["Organizer — Events"], summary="Открыть мероприятие")
+@extend_schema(
+    tags=["Organizer — Events"],
+    summary="Открыть мероприятие",
+    responses={200: EventSerializer},
+    examples=[
+        OpenApiExample(
+            name="Ответ",
+            value={
+                "id": 1,
+                "code": "TECH24",
+                "name": "IT Conf 2024",
+                "is_active": True,
+            },
+            response_only=True,
+        )
+    ],
+)
 class OpenEventView(APIView):
     permission_classes = [IsOrganizer]
 
@@ -109,7 +170,23 @@ class OpenEventView(APIView):
         return Response(EventSerializer(event).data)
 
 
-@extend_schema(tags=["Organizer — Events"], summary="Закрыть мероприятие")
+@extend_schema(
+    tags=["Organizer — Events"],
+    summary="Закрыть мероприятие",
+    responses={200: EventSerializer},
+    examples=[
+        OpenApiExample(
+            name="Ответ",
+            value={
+                "id": 1,
+                "code": "TECH24",
+                "name": "IT Conf 2024",
+                "is_active": False,
+            },
+            response_only=True,
+        )
+    ],
+)
 class CloseEventView(APIView):
     permission_classes = [IsOrganizer]
 
@@ -131,7 +208,15 @@ class OrgStallListView(APIView):
     permission_classes = [IsOrganizer]
 
     @extend_schema(
-        summary="Точки мероприятия", responses={200: OrgStallSerializer(many=True)}
+        summary="Точки мероприятия",
+        responses={200: OrgStallSerializer(many=True)},
+        examples=[
+            OpenApiExample(
+                name="Список точек",
+                value=[{"id": 1, "name": "Кофейня", "abbr": "COF", "status": "open"}],
+                response_only=True,
+            )
+        ],
     )
     def get(self, request, event_id):
         event = _get_event(request, event_id)
@@ -144,6 +229,23 @@ class OrgStallListView(APIView):
         summary="Создать точку",
         request=OrgStallCreateSerializer,
         responses={201: OrgStallSerializer},
+        examples=[
+            OpenApiExample(
+                name="Создание",
+                value={"name": "Новый Бар", "abbr": "BAR2", "menu_id": 1},
+                request_only=True,
+            ),
+            OpenApiExample(
+                name="Ответ",
+                value={
+                    "id": 2,
+                    "name": "Новый Бар",
+                    "abbr": "BAR2",
+                    "status": "closed",
+                },
+                response_only=True,
+            ),
+        ],
     )
     def post(self, request, event_id):
         event = _get_event(request, event_id)
@@ -168,7 +270,17 @@ class OrgStallDetailView(APIView):
         except Stall.DoesNotExist:
             return None
 
-    @extend_schema(summary="Детали точки", responses={200: OrgStallSerializer})
+    @extend_schema(
+        summary="Детали точки",
+        responses={200: OrgStallSerializer},
+        examples=[
+            OpenApiExample(
+                name="Точка",
+                value={"id": 1, "name": "Кофейня", "abbr": "COF", "status": "open"},
+                response_only=True,
+            )
+        ],
+    )
     def get(self, request, event_id, stall_id):
         stall = self._get(request, event_id, stall_id)
         if not stall:
@@ -179,6 +291,13 @@ class OrgStallDetailView(APIView):
         summary="Обновить точку",
         request=OrgStallSerializer,
         responses={200: OrgStallSerializer},
+        examples=[
+            OpenApiExample(
+                name="Обновление названия",
+                value={"name": "Большая Кофейня"},
+                request_only=True,
+            )
+        ],
     )
     def patch(self, request, event_id, stall_id):
         stall = self._get(request, event_id, stall_id)
@@ -189,7 +308,14 @@ class OrgStallDetailView(APIView):
         serializer.save()
         return Response(OrgStallSerializer(stall).data)
 
-    @extend_schema(summary="Удалить точку")
+    @extend_schema(
+        summary="Удалить точку",
+        examples=[
+            OpenApiExample(
+                name="Ответ", value="", response_only=True, status_codes=["204"]
+            )
+        ],
+    )
     def delete(self, request, event_id, stall_id):
         stall = self._get(request, event_id, stall_id)
         if not stall:
@@ -208,7 +334,15 @@ class OrgMenuListView(APIView):
     permission_classes = [IsOrganizer]
 
     @extend_schema(
-        summary="Меню мероприятия", responses={200: MenuSerializer(many=True)}
+        summary="Меню мероприятия",
+        responses={200: MenuSerializer(many=True)},
+        examples=[
+            OpenApiExample(
+                name="Список меню",
+                value=[{"id": 1, "name": "Меню Кофейни"}],
+                response_only=True,
+            )
+        ],
     )
     def get(self, request, event_id):
         event = _get_event(request, event_id)
@@ -221,6 +355,14 @@ class OrgMenuListView(APIView):
         summary="Создать меню",
         request=MenuCreateSerializer,
         responses={201: MenuSerializer},
+        examples=[
+            OpenApiExample(
+                name="Создание", value={"name": "Новое Меню"}, request_only=True
+            ),
+            OpenApiExample(
+                name="Ответ", value={"id": 2, "name": "Новое Меню"}, response_only=True
+            ),
+        ],
     )
     def post(self, request, event_id):
         event = _get_event(request, event_id)
@@ -249,6 +391,17 @@ class OrgMenuItemListView(APIView):
         summary="Добавить позицию в меню",
         request=MenuItemSerializer,
         responses={201: MenuItemSerializer},
+        examples=[
+            OpenApiExample(
+                name="Создание блюда",
+                value={
+                    "name": "Чизкейк",
+                    "description": "Вкусный",
+                    "image": "https://...",
+                },
+                request_only=True,
+            )
+        ],
     )
     def post(self, request, event_id, menu_id):
         menu = self._get_menu(request, event_id, menu_id)
@@ -277,6 +430,13 @@ class OrgMenuItemDetailView(APIView):
         summary="Обновить позицию меню",
         request=MenuItemSerializer,
         responses={200: MenuItemSerializer},
+        examples=[
+            OpenApiExample(
+                name="Обновление описания",
+                value={"description": "Очень вкусный чизкейк"},
+                request_only=True,
+            )
+        ],
     )
     def patch(self, request, event_id, menu_id, item_id):
         item = self._get_item(request, event_id, menu_id, item_id)
@@ -287,7 +447,14 @@ class OrgMenuItemDetailView(APIView):
         serializer.save()
         return Response(MenuItemSerializer(item).data)
 
-    @extend_schema(summary="Удалить позицию меню")
+    @extend_schema(
+        summary="Удалить позицию меню",
+        examples=[
+            OpenApiExample(
+                name="Успех", value="", response_only=True, status_codes=["204"]
+            )
+        ],
+    )
     def delete(self, request, event_id, menu_id, item_id):
         item = self._get_item(request, event_id, menu_id, item_id)
         if not item:
@@ -308,6 +475,13 @@ class OrgUserListView(APIView):
     @extend_schema(
         summary="Пользователи мероприятия",
         responses={200: EventUserListSerializer(many=True)},
+        examples=[
+            OpenApiExample(
+                name="Список 1",
+                value=[{"id": "uuid", "name": "Гость 1", "role": "guest"}],
+                response_only=True,
+            )
+        ],
     )
     def get(self, request, event_id):
         event = _get_event(request, event_id)
@@ -320,6 +494,13 @@ class OrgUserListView(APIView):
         summary="Создать пользователя",
         request=EventUserCreateSerializer,
         responses={201: EventUserDetailSerializer},
+        examples=[
+            OpenApiExample(
+                name="Создать гостя",
+                value={"name": "Иван", "role": "guest", "login": "ivan_guest"},
+                request_only=True,
+            )
+        ],
     )
     def post(self, request, event_id):
         event = _get_event(request, event_id)
@@ -371,6 +552,18 @@ class OrgUserDetailView(APIView):
     @extend_schema(
         summary="Детали пользователя (включая пароль)",
         responses={200: EventUserDetailSerializer},
+        examples=[
+            OpenApiExample(
+                name="Пользователь",
+                value={
+                    "id": "uuid",
+                    "name": "Иван",
+                    "role": "guest",
+                    "is_blocked": False,
+                },
+                response_only=True,
+            )
+        ],
     )
     def get(self, request, event_id, user_id):
         user = self._get_user(request, event_id, user_id)
@@ -382,6 +575,11 @@ class OrgUserDetailView(APIView):
         summary="Заблокировать / разблокировать пользователя",
         request=BlockUserSerializer,
         responses={200: EventUserListSerializer},
+        examples=[
+            OpenApiExample(
+                name="Заблокировать", value={"is_blocked": True}, request_only=True
+            )
+        ],
     )
     def patch(self, request, event_id, user_id):
         user = self._get_user(request, event_id, user_id)
@@ -393,7 +591,14 @@ class OrgUserDetailView(APIView):
         user.save(update_fields=["is_blocked"])
         return Response(EventUserListSerializer(user).data)
 
-    @extend_schema(summary="Удалить пользователя из мероприятия")
+    @extend_schema(
+        summary="Удалить пользователя из мероприятия",
+        examples=[
+            OpenApiExample(
+                name="Удалено", value="", response_only=True, status_codes=["204"]
+            )
+        ],
+    )
     def delete(self, request, event_id, user_id):
         user = self._get_user(request, event_id, user_id)
         if not user:
@@ -412,7 +617,15 @@ class OrgGuestRoleListView(APIView):
     permission_classes = [IsOrganizer]
 
     @extend_schema(
-        summary="Роли гостей", responses={200: GuestRoleSerializer(many=True)}
+        summary="Роли гостей",
+        responses={200: GuestRoleSerializer(many=True)},
+        examples=[
+            OpenApiExample(
+                name="Список ролей",
+                value=[{"id": 1, "name": "VIP", "allowed_items": []}],
+                response_only=True,
+            )
+        ],
     )
     def get(self, request, event_id):
         event = _get_event(request, event_id)
@@ -425,6 +638,11 @@ class OrgGuestRoleListView(APIView):
         summary="Создать роль",
         request=GuestRoleCreateSerializer,
         responses={201: GuestRoleSerializer},
+        examples=[
+            OpenApiExample(
+                name="Создание VIP роли", value={"name": "VIP Гость"}, request_only=True
+            )
+        ],
     )
     def post(self, request, event_id):
         event = _get_event(request, event_id)
@@ -441,6 +659,13 @@ class OrgGuestRoleListView(APIView):
     summary="Добавить позицию в роль",
     request=GuestRoleItemSerializer,
     responses={201: GuestRoleItemSerializer},
+    examples=[
+        OpenApiExample(
+            name="Дать лимит 3 кофе",
+            value={"menu_item_id": 5, "quantity_limit": 3},
+            request_only=True,
+        )
+    ],
 )
 class OrgGuestRoleItemView(APIView):
     permission_classes = [IsOrganizer]
@@ -469,6 +694,18 @@ class OrgGuestRoleItemView(APIView):
     summary="Назначить роль гостю",
     request=AssignRoleSerializer,
     responses={200: None},
+    examples=[
+        OpenApiExample(
+            name="Назначить роль",
+            value={"guest_id": "uuid-гостя", "role_id": 1},
+            request_only=True,
+        ),
+        OpenApiExample(
+            name="Успех",
+            value={"detail": "Роль «VIP» назначена гостю Иван."},
+            response_only=True,
+        ),
+    ],
 )
 class AssignGuestRoleView(APIView):
     permission_classes = [IsOrganizer]
@@ -517,7 +754,17 @@ class AssignGuestRoleView(APIView):
 # ─────────────────────────────────────────────────────
 
 
-@extend_schema(tags=["Organizer — Orders"], summary="Все заказы мероприятия")
+@extend_schema(
+    tags=["Organizer — Orders"],
+    summary="Все заказы мероприятия",
+    examples=[
+        OpenApiExample(
+            name="Список всех заказов",
+            value=[{"id": 1, "order_number": "TECH24-COF-001", "status": "completed"}],
+            response_only=True,
+        )
+    ],
+)
 class OrgOrderListView(APIView):
     permission_classes = [IsOrganizer]
 

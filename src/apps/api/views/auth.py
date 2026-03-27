@@ -1,7 +1,7 @@
 """Authentication views."""
 
 from django.conf import settings
-from drf_spectacular.utils import OpenApiParameter, extend_schema
+from drf_spectacular.utils import OpenApiExample, OpenApiParameter, extend_schema
 from rest_framework import serializers as drf_serializers
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -70,6 +70,24 @@ class _RefreshRequestSerializer(drf_serializers.Serializer):
     description="С event_code — для гостей и персонала. Без event_code — для организаторов.",
     request=LoginSerializer,
     responses={200: _TokenResponseSerializer},
+    examples=[
+        OpenApiExample(
+            name="Успешный логин гостя",
+            value={
+                "access": "eyJhbGciOiJIUzI1NiIn...",
+                "refresh": "eyJhbGciOiJIUzI1NiIsInR5...",
+                "user": {
+                    "id": 1,
+                    "name": "Иван",
+                    "login": "ivan@test.ru",
+                    "role": "guest",
+                },
+                "event": {"id": 1, "code": "TECH24", "name": "IT Conf 2024"},
+            },
+            response_only=True,
+            status_codes=["200"],
+        )
+    ],
 )
 class LoginView(APIView):
     permission_classes = [AllowAny]
@@ -97,6 +115,27 @@ class LoginView(APIView):
     ],
     request=TelegramLoginSerializer,
     responses={200: _TokenResponseSerializer},
+    examples=[
+        OpenApiExample(
+            name="Telegram WebApp дата",
+            value={
+                "initData": "query_id=...&user=%7B%22id%22%3A123...",
+                "invite_code": "SECRET42",
+            },
+            request_only=True,
+        ),
+        OpenApiExample(
+            name="Успешная авторизация ТГ Гостя",
+            value={
+                "access": "eyJhbGci...",
+                "refresh": "eyJhb...",
+                "user": {"id": 1, "name": "Pavel", "login": "@durov", "role": "guest"},
+                "event": {"id": 1, "code": "TECH24"},
+            },
+            response_only=True,
+            status_codes=["200"],
+        ),
+    ],
 )
 class TelegramLoginView(APIView):
     permission_classes = [AllowAny]

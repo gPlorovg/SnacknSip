@@ -35,7 +35,37 @@ def _get_guest_event(request):
 # ─────────────────────────────────────────────────────
 
 
-@extend_schema(tags=["Guest — Stalls"], summary="Список открытых точек мероприятия")
+@extend_schema(
+    tags=["Guest — Stalls"],
+    summary="Список открытых точек мероприятия",
+    examples=[
+        OpenApiExample(
+            name="Список точек",
+            value=[
+                {
+                    "id": 1,
+                    "name": "Кофейня",
+                    "abbr": "COF",
+                    "status": "open",
+                    "menu": {
+                        "id": 1,
+                        "name": "Меню Кофейни",
+                        "menu_items": [
+                            {
+                                "id": 5,
+                                "name": "Эспрессо",
+                                "description": "Двойной эспрессо",
+                                "image": "http://minio.../espresso.jpg",
+                                "is_available": True,
+                            }
+                        ],
+                    },
+                }
+            ],
+            response_only=True,
+        )
+    ],
+)
 class StallListView(APIView):
     permission_classes = [IsGuest]
 
@@ -45,7 +75,35 @@ class StallListView(APIView):
         return Response(StallListSerializer(stalls, many=True).data)
 
 
-@extend_schema(tags=["Guest — Stalls"], summary="Меню точки (со стоп-листом)")
+@extend_schema(
+    tags=["Guest — Stalls"],
+    summary="Меню точки (со стоп-листом)",
+    examples=[
+        OpenApiExample(
+            name="Детали точки",
+            value={
+                "id": 1,
+                "name": "Кофейня",
+                "abbr": "COF",
+                "status": "open",
+                "menu": {
+                    "id": 1,
+                    "name": "Меню Кофейни",
+                    "menu_items": [
+                        {
+                            "id": 5,
+                            "name": "Эспрессо",
+                            "description": "Двойной эспрессо",
+                            "image": "http://...",
+                            "is_available": True,
+                        }
+                    ],
+                },
+            },
+            response_only=True,
+        )
+    ],
+)
 class StallDetailView(APIView):
     permission_classes = [IsGuest]
 
@@ -68,7 +126,28 @@ class StallDetailView(APIView):
 # ─────────────────────────────────────────────────────
 
 
-@extend_schema(tags=["Guest — Orders"], summary="Список моих заказов")
+@extend_schema(
+    tags=["Guest — Orders"],
+    summary="Список моих заказов",
+    responses={200: OrderSerializer(many=True)},
+    examples=[
+        OpenApiExample(
+            name="Список заказов",
+            value=[
+                {
+                    "id": 1,
+                    "order_number": "TECH24-COF-001",
+                    "status": "completed",
+                    "stall": {"id": 1, "name": "Кофейня"},
+                    "items": [
+                        {"id": 1, "menu_item": {"name": "Эспрессо"}, "quantity": 1}
+                    ],
+                }
+            ],
+            response_only=True,
+        )
+    ],
+)
 class OrderListView(APIView):
     permission_classes = [IsGuest]
 
@@ -86,6 +165,33 @@ class OrderListView(APIView):
         summary="Создать заказ",
         request=CreateOrderSerializer,
         responses={201: OrderSerializer},
+        examples=[
+            OpenApiExample(
+                name="Запрос создания заказа",
+                value={
+                    "stall_id": 1,
+                    "items": [
+                        {"menu_item_id": 5, "quantity": 1},
+                        {"menu_item_id": 7, "quantity": 2},
+                    ],
+                },
+                request_only=True,
+            ),
+            OpenApiExample(
+                name="Успешный результат",
+                value={
+                    "id": 1,
+                    "order_number": "TECH24-COF-001",
+                    "status": "created",
+                    "stall": {"id": 1, "name": "Кофейня"},
+                    "items": [
+                        {"id": 1, "menu_item": {"name": "Эспрессо"}, "quantity": 1}
+                    ],
+                },
+                response_only=True,
+                status_codes=["201"],
+            ),
+        ],
     )
     def post(self, request):
         event = _get_guest_event(request)
@@ -161,7 +267,24 @@ class OrderListView(APIView):
         )
 
 
-@extend_schema(tags=["Guest — Orders"], summary="Детали заказа")
+@extend_schema(
+    tags=["Guest — Orders"],
+    summary="Детали заказа",
+    responses={200: OrderSerializer},
+    examples=[
+        OpenApiExample(
+            name="Детали заказа",
+            value={
+                "id": 1,
+                "order_number": "TECH24-COF-001",
+                "status": "created",
+                "stall": {"id": 1, "name": "Кофейня"},
+                "items": [{"id": 1, "menu_item": {"name": "Эспрессо"}, "quantity": 1}],
+            },
+            response_only=True,
+        )
+    ],
+)
 class OrderDetailView(APIView):
     permission_classes = [IsGuest]
 
@@ -189,6 +312,18 @@ class OrderDetailView(APIView):
     tags=["Guest — Orders"],
     summary="Статус заказа (для polling)",
     responses={200: OrderStatusSerializer},
+    examples=[
+        OpenApiExample(
+            name="Статус заказа",
+            value={
+                "id": 1,
+                "order_number": "TECH24-COF-001",
+                "status": "ready",
+                "updated_at": "2024-10-18T12:00:00Z",
+            },
+            response_only=True,
+        )
+    ],
 )
 class OrderStatusView(APIView):
     permission_classes = [IsGuest]
@@ -211,7 +346,26 @@ class OrderStatusView(APIView):
 # ─────────────────────────────────────────────────────
 
 
-@extend_schema(tags=["Guest — Notifications"], summary="Мои уведомления")
+@extend_schema(
+    tags=["Guest — Notifications"],
+    summary="Мои уведомления",
+    responses={200: NotificationSerializer(many=True)},
+    examples=[
+        OpenApiExample(
+            name="Уведомления",
+            value=[
+                {
+                    "id": 1,
+                    "order": 1,
+                    "message": "Ваш заказ готов!",
+                    "is_read": False,
+                    "created_at": "2024-10-18T12:05:00Z",
+                }
+            ],
+            response_only=True,
+        )
+    ],
+)
 class NotificationListView(APIView):
     permission_classes = [IsGuest]
 
@@ -223,7 +377,12 @@ class NotificationListView(APIView):
 
 
 @extend_schema(
-    tags=["Guest — Notifications"], summary="Отметить уведомление как прочитанное"
+    tags=["Guest — Notifications"],
+    summary="Отметить уведомление как прочитанное",
+    responses={204: None},
+    examples=[
+        OpenApiExample(name="Ответ", value="", response_only=True, status_codes=["204"])
+    ],
 )
 class NotificationReadView(APIView):
     permission_classes = [IsGuest]

@@ -10,6 +10,7 @@ from apps.api.auth.permissions import IsOrganizerOrStaff, IsStaff
 from apps.api.models import MenuItem, Notification, Order, Stall
 from apps.api.models.orders import OrderStatus
 from apps.api.models.stalls import StallMenuItem, StallStatus
+from drf_spectacular.utils import OpenApiExample
 from apps.api.serializers.staff import (
     OrderStatusUpdateSerializer,
     RedistributeOrderSerializer,
@@ -45,7 +46,17 @@ def _create_notification(event_user, order, message: str):
 # ─────────────────────────────────────────────────────
 
 
-@extend_schema(tags=["Staff — Stall"], summary="Моя точка (текущий статус)")
+@extend_schema(
+    tags=["Staff — Stall"],
+    summary="Моя точка (текущий статус)",
+    examples=[
+        OpenApiExample(
+            name="Статус точки",
+            value={"id": 1, "name": "Бар", "status": "open"},
+            response_only=True,
+        )
+    ],
+)
 class MyStallView(APIView):
     permission_classes = [IsStaff]
 
@@ -59,7 +70,17 @@ class MyStallView(APIView):
         return Response(StallStatusSerializer(stall).data)
 
 
-@extend_schema(tags=["Staff — Stall"], summary="Открыть точку")
+@extend_schema(
+    tags=["Staff — Stall"],
+    summary="Открыть точку",
+    examples=[
+        OpenApiExample(
+            name="Успешное открытие",
+            value={"id": 1, "name": "Бар", "status": "open"},
+            response_only=True,
+        )
+    ],
+)
 class OpenStallView(APIView):
     permission_classes = [IsStaff]
 
@@ -74,7 +95,21 @@ class OpenStallView(APIView):
         return Response(StallStatusSerializer(stall).data)
 
 
-@extend_schema(tags=["Staff — Stall"], summary="Закрыть точку")
+@extend_schema(
+    tags=["Staff — Stall"],
+    summary="Закрыть точку",
+    examples=[
+        OpenApiExample(
+            name="Ответ при закрытии",
+            value={
+                "detail": "Точка закрыта.",
+                "pending_orders": 3,
+                "hint": "Используйте POST /staff/orders/redistribute/ для перераспределения или отмены заказов.",
+            },
+            response_only=True,
+        )
+    ],
+)
 class CloseStallView(APIView):
     permission_classes = [IsStaff]
 
@@ -116,7 +151,28 @@ class CloseStallView(APIView):
 # ─────────────────────────────────────────────────────
 
 
-@extend_schema(tags=["Staff — Menu"], summary="Меню точки (управление стоп-листом)")
+@extend_schema(
+    tags=["Staff — Menu"],
+    summary="Меню точки (управление стоп-листом)",
+    examples=[
+        OpenApiExample(
+            name="Список позиций",
+            value=[
+                {
+                    "id": 1,
+                    "menu_item": {
+                        "id": 5,
+                        "name": "Эспрессо",
+                        "description": "Двойной",
+                        "image": "...",
+                    },
+                    "is_available": True,
+                }
+            ],
+            response_only=True,
+        )
+    ],
+)
 class StallMenuView(APIView):
     permission_classes = [IsStaff]
 
@@ -133,6 +189,27 @@ class StallMenuView(APIView):
     summary="Изменить доступность позиции (стоп-лист)",
     request=ToggleMenuItemSerializer,
     responses={200: StallMenuItemSerializer},
+    examples=[
+        OpenApiExample(
+            name="Убрать в стоп-лист",
+            value={"is_available": False},
+            request_only=True,
+        ),
+        OpenApiExample(
+            name="Ответ",
+            value={
+                "id": 1,
+                "menu_item": {
+                    "id": 5,
+                    "name": "Эспрессо",
+                    "description": "Двойной",
+                    "image": "...",
+                },
+                "is_available": False,
+            },
+            response_only=True,
+        ),
+    ],
 )
 class ToggleMenuItemView(APIView):
     permission_classes = [IsStaff]
@@ -215,7 +292,26 @@ def _handle_stop_list(stall: Stall, menu_item: MenuItem):
 # ─────────────────────────────────────────────────────
 
 
-@extend_schema(tags=["Staff — Orders"], summary="Заказы на моей точке")
+@extend_schema(
+    tags=["Staff — Orders"],
+    summary="Заказы на моей точке",
+    examples=[
+        OpenApiExample(
+            name="Список заказов",
+            value=[
+                {
+                    "id": 1,
+                    "order_number": "TECH24-COF-001",
+                    "status": "created",
+                    "items": [
+                        {"id": 1, "menu_item": {"name": "Эспрессо"}, "quantity": 1}
+                    ],
+                }
+            ],
+            response_only=True,
+        )
+    ],
+)
 class StallOrderListView(APIView):
     permission_classes = [IsStaff]
 
@@ -242,6 +338,28 @@ class StallOrderListView(APIView):
     summary="Обновить статус заказа",
     request=OrderStatusUpdateSerializer,
     responses={200: StaffOrderSerializer},
+    examples=[
+        OpenApiExample(
+            name="Взять в работу",
+            value={"status": "preparing"},
+            request_only=True,
+        ),
+        OpenApiExample(
+            name="Отменить (нет молока)",
+            value={"status": "cancelled", "cancel_note": "Закончилось молоко"},
+            request_only=True,
+        ),
+        OpenApiExample(
+            name="Ответ",
+            value={
+                "id": 1,
+                "order_number": "TECH24-COF-001",
+                "status": "preparing",
+                "items": [{"id": 1, "menu_item": {"name": "Эспрессо"}, "quantity": 1}],
+            },
+            response_only=True,
+        ),
+    ],
 )
 class UpdateOrderStatusView(APIView):
     permission_classes = [IsStaff]
@@ -312,6 +430,17 @@ def _status_message(new_status: str, order_number: str) -> str:
         "Заказ перераспределяется на другую точку если её меню содержит "
         "все позиции заказа. Иначе требует ручной обработки."
     ),
+    examples=[
+        OpenApiExample(
+            name="Пример перераспределения",
+            value={
+                "redistributed": ["TECH24-COF-001", "TECH24-COF-002"],
+                "failed": ["TECH24-COF-003"],
+                "hint": "Заказы из 'failed' требуют ручной обработки или отмены.",
+            },
+            response_only=True,
+        )
+    ],
 )
 class AutoRedistributeView(APIView):
     permission_classes = [IsOrganizerOrStaff]
@@ -403,6 +532,23 @@ def _find_stall_for_order(stalls, order_menu_ids: set) -> Stall | None:
     summary="Ручное перераспределение одного заказа на другую точку",
     request=RedistributeOrderSerializer,
     responses={200: StaffOrderSerializer},
+    examples=[
+        OpenApiExample(
+            name="Перенести на точку ID=2",
+            value={"target_stall_id": 2},
+            request_only=True,
+        ),
+        OpenApiExample(
+            name="Ответ",
+            value={
+                "id": 1,
+                "order_number": "TECH24-COF-001",
+                "status": "created",
+                "items": [{"id": 1, "menu_item": {"name": "Эспрессо"}, "quantity": 1}],
+            },
+            response_only=True,
+        ),
+    ],
 )
 class ManualRedistributeView(APIView):
     permission_classes = [IsOrganizerOrStaff]
@@ -450,6 +596,18 @@ class ManualRedistributeView(APIView):
 @extend_schema(
     tags=["Staff — Orders"],
     summary="Массовая отмена заказов на закрытой точке",
+    examples=[
+        OpenApiExample(
+            name="Отмена с комментарием",
+            value={"cancel_note": "Точка закрыта, молоко скисло."},
+            request_only=True,
+        ),
+        OpenApiExample(
+            name="Результат отмены",
+            value={"cancelled": ["TECH24-COF-003"], "count": 1},
+            response_only=True,
+        ),
+    ],
 )
 class BulkCancelOrdersView(APIView):
     permission_classes = [IsOrganizerOrStaff]

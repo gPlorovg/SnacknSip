@@ -73,9 +73,11 @@ class LoginSerializer(serializers.Serializer):
         user = authenticate(username=login, password=password)
         if not user:
             raise serializers.ValidationError({"login": "Неверный логин или пароль."})
-        if not user.is_staff:
+        if not hasattr(user, "organizer_profile"):
             raise serializers.ValidationError(
-                {"login": "Доступ запрещён. Используйте event_code для входа."}
+                {
+                    "login": "Доступ запрещён. Используйте event_code для гостей и персонала."
+                }
             )
         tokens = get_tokens_for_organizer(user)
         return {"tokens": tokens, "user": user}

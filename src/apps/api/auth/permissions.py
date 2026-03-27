@@ -4,14 +4,22 @@ from rest_framework.permissions import BasePermission
 
 
 class IsOrganizer(BasePermission):
-    """Only Django staff/superusers (organizers)."""
+    """
+    Django Users who have an OrganizerProfile.
+    Does NOT require is_staff — organizers have no Django Admin access.
+    Only superusers can access Django Admin.
+    """
 
     def has_permission(self, request, view):
-        return bool(
-            request.user
-            and request.user.is_authenticated
-            and getattr(request.user, "is_staff", False)
-        )
+        if not request.user or not request.user.is_authenticated:
+            return False
+        # Must be a Django User (not an EventUser)
+        from apps.api.models import EventUser
+
+        if isinstance(request.user, EventUser):
+            return False
+        # Must have an OrganizerProfile
+        return hasattr(request.user, "organizer_profile")
 
 
 class IsEventUser(BasePermission):

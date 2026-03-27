@@ -19,6 +19,7 @@ from apps.api.serializers.staff import (
     ToggleMenuItemSerializer,
 )
 from apps.api.views.guest import _release_limit
+from apps.api.tasks.notifications import send_push_notification
 
 
 def _get_staff_stall(request) -> Stall | None:
@@ -30,12 +31,13 @@ def _get_staff_stall(request) -> Stall | None:
 
 
 def _create_notification(event_user, order, message: str):
-    Notification.objects.create(
+    notification = Notification.objects.create(
         event_user=event_user,
         order=order,
         message=message,
         order_status=order.status,
     )
+    transaction.on_commit(lambda: send_push_notification.delay(notification.id))
 
 
 # ─────────────────────────────────────────────────────

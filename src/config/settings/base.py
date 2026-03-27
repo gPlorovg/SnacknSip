@@ -143,6 +143,10 @@ CELERY_BEAT_SCHEDULE = {
         "task": "apps.api.tasks.events.auto_close_events",
         "schedule": 60.0,  # каждую минуту
     },
+    "flush-expired-tokens": {
+        "task": "apps.api.tasks.tokens.flush_expired_tokens",
+        "schedule": 3600.0,  # каждый час
+    },
 }
 
 # =============================================================================

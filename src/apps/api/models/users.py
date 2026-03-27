@@ -82,7 +82,12 @@ class EventUser(models.Model):
         related_name="users",
         verbose_name="Мероприятие",
     )
-    login = models.EmailField(verbose_name="Email (логин)")
+    login = models.EmailField(
+        verbose_name="Email (логин)",
+        blank=True,
+        null=True,
+        help_text="Email для входа по паролю. Обязательно если нет telegram_username.",
+    )
     password_hash = models.CharField(
         max_length=255,
         blank=True,
@@ -94,10 +99,18 @@ class EventUser(models.Model):
         null=True,
         verbose_name="Зашифрованный пароль (для орга)",
     )
+    telegram_username = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        verbose_name="Telegram username",
+        help_text="@username в Telegram. Орг добавляет по username.",
+    )
     telegram_id = models.BigIntegerField(
         blank=True,
         null=True,
         verbose_name="Telegram ID",
+        help_text="Заполняется автоматически ботом при первом входе.",
     )
     name = models.CharField(max_length=255, verbose_name="Имя")
     role = models.CharField(
@@ -116,24 +129,55 @@ class EventUser(models.Model):
 
     objects = EventUserQuerySet.as_manager()
 
+    # --- DRF / Django auth protocol ---
+    # Required so DRF's IsAuthenticated and other permissions work
+    is_authenticated = True
+    is_anonymous = False
+    is_staff = False  # EventUsers are never Django staff
+    is_superuser = False
+
     class Meta:
         verbose_name = "Пользователь мероприятия"
         verbose_name_plural = "Пользователи мероприятий"
         constraints = [
-            UniqueConstraint(fields=["event", "login"], name="unique_event_login"),
+            # login (email) уникален внутри event если указан
+            UniqueConstraint(
+                fields=["event", "login"],
+                condition=Q(login__isnull=False),
+                name="unique_event_login",
+            ),
+            # telegram_username уникален внутри event если указан
+            UniqueConstraint(
+                fields=["event", "telegram_username"],
+                condition=Q(telegram_username__isnull=False),
+                name="unique_event_telegram_username",
+            ),
+            # telegram_id уникален внутри event если указан
             UniqueConstraint(
                 fields=["event", "telegram_id"],
                 condition=Q(telegram_id__isnull=False),
                 name="unique_event_telegram_id",
             ),
+            # Хотя бы один основной идентификатор обязателен
             CheckConstraint(
-                condition=Q(password_hash__isnull=False) | Q(telegram_id__isnull=False),
-                name="event_user_has_credentials",
+                condition=Q(login__isnull=False) | Q(telegram_username__isnull=False),
+                name="event_user_has_primary_identifier",
             ),
         ]
 
     def __str__(self) -> str:
-        return f"{self.login} @ {self.event.code}"
+        identifier = self.login or (
+            f"@{self.telegram_username}"
+            if self.telegram_username
+            else f"tg:{self.telegram_id}"
+        )
+        return f"{identifier} @ {self.event.code}"
+
+    def save(self, *args, **kwargs):
+        # Always store telegram_username without @ prefix
+        if self.telegram_username:
+            self.telegram_username = self.telegram_username.strip().lstrip("@")
+        super().save(*args, **kwargs)
 
     def set_password(self, plain: str) -> str:
         """Hash and encrypt password. Returns plain for one-time display."""

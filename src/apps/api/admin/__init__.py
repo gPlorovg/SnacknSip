@@ -45,10 +45,22 @@ class OrganizerProfileAdmin(admin.ModelAdmin):
 
 @admin.register(EventUser)
 class EventUserAdmin(admin.ModelAdmin):
-    list_display = ("login", "name", "event", "role", "is_blocked", "telegram_id")
+    list_display = (
+        "login",
+        "telegram_username",
+        "name",
+        "event",
+        "role",
+        "is_available_display",
+        "telegram_id",
+    )
     list_filter = ("role", "is_blocked", "event")
-    search_fields = ("login", "name", "telegram_id")
-    readonly_fields = ("password_hash", "created_at", "updated_at")
+    search_fields = ("login", "telegram_username", "name")
+    readonly_fields = ("password_hash", "telegram_id", "created_at", "updated_at")
+
+    @admin.display(description="Доступен", boolean=True)
+    def is_available_display(self, obj):
+        return not obj.is_blocked
 
 
 @admin.register(Event)

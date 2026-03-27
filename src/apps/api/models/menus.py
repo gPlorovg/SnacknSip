@@ -52,3 +52,18 @@ class MenuItem(models.Model):
 
     def __str__(self) -> str:
         return f"{self.name} ({self.menu.name})"
+
+    def save(self, *args, **kwargs):
+        is_new = self.pk is None
+        super().save(*args, **kwargs)
+        if is_new:
+            # Add StallMenuItem for every stall that uses this menu
+            from apps.api.models.stalls import StallMenuItem  # avoid circular import
+
+            stalls = self.menu.stalls.all()
+            to_create = [
+                StallMenuItem(stall=stall, menu_item=self, is_available=True)
+                for stall in stalls
+            ]
+            if to_create:
+                StallMenuItem.objects.bulk_create(to_create, ignore_conflicts=True)

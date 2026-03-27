@@ -4,6 +4,7 @@ from django.urls import path
 
 from apps.api.views.auth import LoginView, LogoutView, RefreshView, TelegramLoginView
 from apps.api.views.guest import (
+    GuestLimitsView,
     NotificationListView,
     NotificationReadView,
     OrderDetailView,
@@ -62,6 +63,8 @@ urlpatterns = [
         NotificationReadView.as_view(),
         name="notification-read",
     ),
+    # ── Guest: Me ─────────────────────────────────────────────
+    path("me/limits/", GuestLimitsView.as_view(), name="guest-limits"),
     # ── Staff: Stall management ───────────────────────────────
     path("staff/stall/", MyStallView.as_view(), name="staff-my-stall"),
     path("staff/stall/open/", OpenStallView.as_view(), name="staff-stall-open"),

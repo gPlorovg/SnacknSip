@@ -1,7 +1,7 @@
 """Guest-facing API views."""
 
 from django.db import transaction
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import OpenApiExample, extend_schema
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -236,6 +236,79 @@ class NotificationReadView(APIView):
         notif.is_read = True
         notif.save(update_fields=["is_read"])
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+@extend_schema(
+    tags=["Guest — Limits"],
+    summary="Мои Лимиты",
+    description="Возвращает квоты (лимиты) гостя на заказ еды.",
+    responses={
+        200: {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "menu_item_name": {"type": "string"},
+                    "max_quantity": {"type": "integer"},
+                    "used_quantity": {"type": "integer"},
+                    "remaining": {"type": "integer"},
+                },
+            },
+        }
+    },
+    examples=[
+        OpenApiExample(
+            name="Пример лимитов гостя",
+            value=[
+                {
+                    "menu_item_name": "Капучино",
+                    "max_quantity": 2,
+                    "used_quantity": 1,
+                    "remaining": 1,
+                },
+                {
+                    "menu_item_name": "Круассан",
+                    "max_quantity": 1,
+                    "used_quantity": 0,
+                    "remaining": 1,
+                },
+            ],
+            response_only=True,
+        )
+    ],
+)
+class GuestLimitsView(APIView):
+    permission_classes = [IsGuest]
+
+    def get(self, request):
+        try:
+            guest_profile = request.user.guest_profile
+            role = guest_profile.role
+        except Exception:
+            return Response([])
+
+        if not role:
+            return Response([])
+
+        items = GuestRoleItem.objects.filter(role=role).select_related("menu_item")
+        usages = {
+            u.menu_item_id: u.used_quantity
+            for u in GuestLimitUsage.objects.filter(event_guest=guest_profile)
+        }
+
+        data = []
+        for item in items:
+            used = usages.get(item.menu_item_id, 0)
+            data.append(
+                {
+                    "menu_item_name": item.menu_item.name,
+                    "max_quantity": item.max_quantity,
+                    "used_quantity": used,
+                    "remaining": max(0, item.max_quantity - used),
+                }
+            )
+
+        return Response(data)
 
 
 # ─────────────────────────────────────────────────────

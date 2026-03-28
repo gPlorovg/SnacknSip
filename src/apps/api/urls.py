@@ -1,5 +1,6 @@
 """API URL routing."""
 
+from django.http import JsonResponse
 from django.urls import path
 
 from apps.api.views.auth import LoginView, LogoutView, RefreshView, TelegramLoginView
@@ -44,7 +45,21 @@ from apps.api.views.staff import (
     UpdateOrderStatusView,
 )
 
+
+def api_root(_request):
+    return JsonResponse(
+        {
+            "service": "SnacknSip API",
+            "docs": "/api/docs/",
+            "schema": "/api/schema/",
+            "redoc": "/api/redoc/",
+            "auth_login": "/api/auth/login/",
+        }
+    )
+
+
 urlpatterns = [
+    path("", api_root, name="api-root"),
     # ── Auth ─────────────────────────────────────────────────
     path("auth/login/", LoginView.as_view(), name="auth-login"),
     path("auth/telegram/", TelegramLoginView.as_view(), name="auth-telegram"),

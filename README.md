@@ -25,24 +25,25 @@
 ```text
 SnacknSip/
 ├── docker-compose.yml         # Dev-окружение (БД, Redis, Minio)
-├── docker-compose.prod.yml    # Полное Prod-окружение (web, nginx, celery, БД, S3)
+├── docker-compose.prod.yml    # Полное Prod-окружение (web, ui, nginx, celery, БД, S3)
 ├── Dockerfile                 # Multistage Docker-образ (Python 3.12 + uv)
 ├── pyproject.toml / uv.lock   # Зависимости проекта (uv менеджер пакетов)
-├── nginx/                     # Конфигурация Nginx для продакшена (SSL, Reverse Proxy)
+├── nginx/                     # Конфигурация Nginx для prod (API -> Django, / -> UI)
 │   └── default.conf
-└── src/                       # Основной Python / Django код
-    ├── manage.py
-    ├── entrypoint.sh          # Скрипт старта для Prod (накатывает миграции, статику)
-    ├── config/                # Настройки проекта
-    │   ├── settings/          # Разделенные настройки (base.py, dev.py, prod.py)
-    │   └── urls.py            # Главный роутинг + Swagger UI генератор
-    └── apps/api/              # Ядро сервиса
-        ├── auth/              # Кастомная аутентификация (Token + Cookies)
-        ├── models/            # Схемы БД: Event, Stall, Order, EventUser, MenuItem и тд.
-        ├── serializers/       # DRF валидаторы (отдельно для Organizer, Staff, Guest)
-        ├── views/             # API эндпоинты по ролям
-        ├── tasks/             # Фоновые Celery-задачи (Push-уведомления)
-        └── tests/             # Pytest-тесты покрывающие бизнес-логику (лимиты, статусы)
+├── src/                       # Основной Python / Django код
+│   ├── manage.py
+│   ├── entrypoint.sh          # Скрипт старта для Prod (накатывает миграции, статику)
+│   ├── config/                # Настройки проекта
+│   │   ├── settings/          # Разделенные настройки (base.py, dev.py, prod.py)
+│   │   └── urls.py            # Главный роутинг + Swagger UI генератор
+│   └── apps/api/              # Ядро сервиса
+│       ├── auth/              # Кастомная аутентификация (Token + Cookies)
+│       ├── models/            # Схемы БД: Event, Stall, Order, EventUser, MenuItem и тд.
+│       ├── serializers/       # DRF валидаторы (отдельно для Organizer, Staff, Guest)
+│       ├── views/             # API эндпоинты по ролям
+│       ├── tasks/             # Фоновые Celery-задачи (Push-уведомления)
+│       └── tests/             # Pytest-тесты покрывающие бизнес-логику (лимиты, статусы)
+└── ui/                        # Next.js веб-интерфейс
 ```
 
 ---
@@ -96,7 +97,7 @@ pytest apps/api/tests/ -v
 ```
 
 ### 3. Продакшен запуск (Docker)
-Продакшен включает в себя Gunicorn, полнофункциональный Nginx со статикой, фоновые воркеры Celery.
+Продакшен включает в себя Gunicorn (backend), отдельный Next.js контейнер (frontend), Nginx как единый reverse proxy, фоновые воркеры Celery.
 
 ```bash
 # 1. Создание актуального env-файла для продакшена
@@ -106,6 +107,10 @@ cp .env.prod.example .env.prod
 # 2. Билд и запуск (используя docker-compose.prod.yml)
 docker compose --env-file .env.prod -f docker-compose.prod.yml up --build -d
 ```
+
+После запуска:
+- `http://<домен>/` -> веб-интерфейс из `ui/`
+- `http://<домен>/api/` и `http://<домен>/admin/` -> Django backend
 
 ---
 

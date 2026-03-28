@@ -54,12 +54,27 @@ services:
       - MINIO_URL=http://minio:9000
     volumes:
       - static_volume:/app/staticfiles
-    ports:
-      - "8000:8000"
+    expose:
+      - "8000"
     depends_on:
       - db
       - redis
     command: ["/app/entrypoint.sh", "gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "3"]
+
+  ui:
+    build:
+      context: ./ui
+      dockerfile: Dockerfile
+    restart: always
+    env_file:
+      - .env.prod
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+    expose:
+      - "3000"
+    depends_on:
+      - web
 
   worker:
     build:
@@ -102,6 +117,7 @@ services:
       - "80:80"
     depends_on:
       - web
+      - ui
 
 volumes:
   postgres_prod_data:

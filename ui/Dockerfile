@@ -7,6 +7,7 @@ FROM node:22-alpine AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+# Важно: переменные окружения для билда (если есть) должны быть здесь
 RUN npm run build
 
 FROM node:22-alpine AS runner
@@ -14,12 +15,12 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
 
-# Keep runtime image small and only ship what Next.js needs for production start.
+# Копируем только то, что реально нужно для запуска в standalone режиме
 COPY --from=builder /app/public ./public
-COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package.json ./package.json
-COPY --from=builder /app/next.config.ts ./next.config.ts
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
 
 EXPOSE 3000
-CMD ["npm", "run", "start", "--", "-p", "3000"]
+
+# В режиме standalone Next.js генерирует server.js, который не требует npm
+CMD ["node", "server.js"]

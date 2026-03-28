@@ -18,6 +18,7 @@ from apps.api.views.organizer import (
     CloseEventView,
     EventDetailView,
     EventListView,
+    EventQrView,
     OpenEventView,
     OrgGuestRoleItemView,
     OrgGuestRoleListView,
@@ -98,6 +99,17 @@ urlpatterns = [
         "staff/orders/cancel-all/",
         BulkCancelOrdersView.as_view(),
         name="staff-bulk-cancel",
+    ),
+    # ── Organizer: QR Codes ───────────────────────────────────
+    path(
+        "organizer/events/<str:code>/qr/",
+        EventQrView.as_view(),
+        name="organizer-event-qr",
+    ),
+    path(
+        "org/events/<str:code>/qr/",
+        EventQrView.as_view(),
+        name="org-event-qr",
     ),
     # ── Organizer: Events ─────────────────────────────────────
     path("org/events/", EventListView.as_view(), name="org-event-list"),

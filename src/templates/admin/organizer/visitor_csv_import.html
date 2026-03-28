@@ -1,0 +1,21 @@
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+  <h1>{{ title }}</h1>
+
+  <p>Поддерживаемые колонки: <code>name</code>, <code>login</code>, <code>telegram_username</code>, <code>role</code>, <code>guest_role</code>.</p>
+
+  {% if errors %}
+    <div class="messagelist">
+      {% for error in errors %}
+        <div class="error">{{ error }}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" class="default">Проверить / Импортировать</button>
+  </form>
+{% endblock %}

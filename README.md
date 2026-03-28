@@ -112,6 +112,38 @@ docker compose --env-file .env.prod -f docker-compose.prod.yml up --build -d
 - `http://<домен>/` -> веб-интерфейс из `ui/`
 - `http://<домен>/api/` и `http://<домен>/admin/` -> Django backend
 
+### 4. Наполнение БД тестовыми данными
+
+Для генерации тестового мероприятия и пользователей используйте management-команду `seed_test_data`.
+
+Локально:
+```bash
+python src/manage.py seed_test_data \
+  --organizer-username organizer1 \
+  --event-code DEMO26 \
+  --guests 45 \
+  --staff 5
+```
+
+В production (docker compose):
+```bash
+docker compose --env-file .env.prod -f docker-compose.prod.yml exec web \
+  python manage.py seed_test_data \
+  --organizer-username organizer1 \
+  --event-code DEMO26 \
+  --guests 45 \
+  --staff 5 \
+  --csv-path /tmp/event_users_{event_code}.csv
+```
+
+CSV с логинами/паролями будет внутри контейнера `web` (например, `/tmp/event_users_DEMO26.csv`).
+
+Чтобы скачать CSV на хост:
+```bash
+docker compose --env-file .env.prod -f docker-compose.prod.yml cp \
+  web:/tmp/event_users_DEMO26.csv ./event_users_DEMO26.csv
+```
+
 ---
 
 ## 🚨 Возможные ошибки и их решения

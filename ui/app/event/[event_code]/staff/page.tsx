@@ -60,7 +60,7 @@ export default function StaffStallPage() {
   const [menu, setMenu] = useState<MenuItem[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
-  const pollingRef = useRef<NodeJS.Timer | null>(null);
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const statusMap: Record<string, string> = {
     open: "Открыта",

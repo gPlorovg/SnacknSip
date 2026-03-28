@@ -37,8 +37,6 @@ DJANGO_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
 ]
-if HAS_UNFOLD:
-    DJANGO_APPS.insert(0, "unfold")
 
 THIRD_PARTY_APPS = [
     "rest_framework",
@@ -47,6 +45,7 @@ THIRD_PARTY_APPS = [
     "drf_spectacular",
     "storages",
     "corsheaders",
+    *(["unfold"] if HAS_UNFOLD else []),
 ]
 
 LOCAL_APPS = [

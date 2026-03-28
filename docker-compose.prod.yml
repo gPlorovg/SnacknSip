@@ -51,7 +51,7 @@ services:
       - DJANGO_SETTINGS_MODULE=config.settings.prod
       - DB_HOST=db
       - REDIS_URL=redis://redis:6379/0
-      - MINIO_URL=http://minio:9000
+      - MINIO_URL=${MINIO_URL:-http://minio:9000}
     volumes:
       - static_volume:/app/staticfiles
     expose:
@@ -86,7 +86,7 @@ services:
       - DJANGO_SETTINGS_MODULE=config.settings.prod
       - DB_HOST=db
       - REDIS_URL=redis://redis:6379/0
-      - MINIO_URL=http://minio:9000
+      - MINIO_URL=${MINIO_URL:-http://minio:9000}
     depends_on:
       - db
       - redis

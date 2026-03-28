@@ -4,7 +4,9 @@
 
 Организатор управляет мероприятием через интерфейс Django Admin.
 
-![Админка](image-2.png)
+
+<img width="1595" height="1234" alt="image" src="https://github.com/user-attachments/assets/1976b58f-a761-4235-af06-0410c8610772" />
+
 
 Учетная запись организатора и само мероприятие создаются администраторами сервиса.
 
@@ -14,7 +16,8 @@
 
 Организатор может изменять параметры мероприятия на странице «Мероприятия».
 
-![Мероприятия](image-3.png)
+<img width="1924" height="1079" alt="image" src="https://github.com/user-attachments/assets/d8a0314a-d8cc-4780-ab2a-9b5c2d36db3d" />
+
 
 ---
 
@@ -22,7 +25,8 @@
 
 Организатор может добавлять и удалять гостей и персонал на странице «Пользователи мероприятий».
 
-![Пользователи мероприятий](image-4.png)
+<img width="1882" height="1121" alt="image" src="https://github.com/user-attachments/assets/fe1161a5-04e6-46a9-b079-d4e85a2ad391" />
+
 
 ---
 
@@ -34,19 +38,22 @@
 
 Добавление и удаление ролей выполняется на странице «Роли гостей».
 
-![Роли гостей](image-5.png)
+<img width="1916" height="790" alt="image" src="https://github.com/user-attachments/assets/39426ef8-1cce-454b-909d-9e38b45e0e81" />
+
 
 ### Настройка лимитов ролей
 
 Параметры ролей задаются на странице «Лимиты позиций для ролей».
 
-![Лимиты ролей](image-6.png)
+<img width="1900" height="1012" alt="image" src="https://github.com/user-attachments/assets/2b53b24a-849b-4564-9b40-3d1a4553be61" />
+
 
 ### Назначение ролей
 
 Назначение ролей пользователям выполняется на странице «Гости мероприятий».
 
-![Гости мероприятий](image-7.png)
+<img width="1872" height="1103" alt="image" src="https://github.com/user-attachments/assets/d0e65fab-4755-4c05-90bb-8c075078dbfb" />
+
 
 ---
 
@@ -56,13 +63,15 @@
 
 Для настройки меню используется страница «Меню».
 
-![Меню](image-8.png)
+<img width="1917" height="1040" alt="image" src="https://github.com/user-attachments/assets/32e04be4-7cb0-4d06-9bed-316769542e13" />
+
 
 ### Позиции меню
 
 Управление отдельными позициями меню выполняется на странице «Позиции меню».
 
-![Позиции меню](image-9.png)
+<img width="1914" height="985" alt="image" src="https://github.com/user-attachments/assets/1a4548c2-abd4-4702-8297-2dbdd24b6cad" />
+
 
 ---
 
@@ -72,19 +81,22 @@
 
 Точки выдачи создаются на странице «Точки выдачи».
 
-![Точки выдачи](image-11.png)
+<img width="1931" height="942" alt="image" src="https://github.com/user-attachments/assets/726e5675-e9cf-4b79-bcac-72a88c099ad0" />
+
 
 ### Назначение персонала
 
 Персонал назначается на странице «Персонал точек».
 
-![Персонал точек](image-10.png)
+<img width="1914" height="1010" alt="image" src="https://github.com/user-attachments/assets/a85108f3-aa8a-4993-95c8-0041172ea5a4" />
+
 
 ### Стоп-лист
 
 Добавление позиций в стоп-лист выполняется на странице «Стоп-лист точек».
 
-![Стоп-лист](image-12.png)
+<img width="1915" height="779" alt="image" src="https://github.com/user-attachments/assets/c5b85d3d-ec25-4df8-8dd7-f04e85941b82" />
+
 
 ---
 
@@ -92,7 +104,8 @@
 
 Просмотр и управление заказами осуществляется на странице «Заказы».
 
-![Заказы](image-13.png)
+<img width="1898" height="1267" alt="image" src="https://github.com/user-attachments/assets/cb1a84e4-61c1-433f-acdd-5593b39d56ff" />
+
 
 ---
 

@@ -18,6 +18,7 @@ dependencies = [
     "Pillow>=10.0",
     "cryptography>=42.0",
     "gunicorn>=22.0",
+    "django-cors-headers>=4.9.0",
 ]
 
 [tool.ruff]

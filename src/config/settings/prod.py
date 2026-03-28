@@ -5,6 +5,25 @@ from decouple import config
 from .base import *  # noqa: F403
 from .base import REST_FRAMEWORK
 
+
+def _parse_allowed_hosts(raw: str) -> list[str]:
+    hosts: list[str] = []
+    for item in raw.split(","):
+        host = item.strip().strip("\"'").rstrip(".")
+        if host:
+            hosts.append(host)
+    return hosts
+
+
+# Fail-safe for production: never allow empty ALLOWED_HOSTS.
+if not ALLOWED_HOSTS:  # noqa: F405
+    ALLOWED_HOSTS = _parse_allowed_hosts(  # noqa: F405
+        config(
+            "ALLOWED_HOSTS",
+            default="127.0.0.1,localhost,snacknsip.ru,www.snacknsip.ru",
+        )
+    )
+
 # Строго выключаем DEBUG
 DEBUG = config("DEBUG", default=False, cast=bool)
 

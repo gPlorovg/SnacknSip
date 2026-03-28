@@ -10,8 +10,21 @@ from decouple import config
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 HAS_UNFOLD = find_spec("unfold") is not None
 
+
+def _parse_allowed_hosts(raw: str) -> list[str]:
+    hosts: list[str] = []
+    for item in raw.split(","):
+        host = item.strip().strip("\"'").rstrip(".")
+        if host:
+            hosts.append(host)
+    return hosts
+
+
 SECRET_KEY = config("SECRET_KEY")
 DEBUG = config("DEBUG", default=False, cast=bool)
+ALLOWED_HOSTS = _parse_allowed_hosts(
+    config("ALLOWED_HOSTS", default="localhost,127.0.0.1")
+)
 _CORS_RAW = config("CORS_ALLOWED_ORIGINS", default="")
 CORS_ALLOWED_ORIGINS = [origin for origin in _CORS_RAW.split(",") if origin]
 

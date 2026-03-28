@@ -45,7 +45,7 @@ THIRD_PARTY_APPS = [
     "drf_spectacular",
     "storages",
     "corsheaders",
-    *(["unfold"] if HAS_UNFOLD else []),
+    *(["unfold.apps.BasicAppConfig"] if HAS_UNFOLD else []),
 ]
 
 LOCAL_APPS = [

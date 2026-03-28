@@ -46,13 +46,15 @@ except (
 
 
 class OrganizerAdminAuthenticationForm(AuthenticationForm):
-    """Allow login only for Django users who are organizers and not is_staff."""
+    """Allow organizers and superusers to login to organizer admin."""
 
     def confirm_login_allowed(self, user) -> None:
         super().confirm_login_allowed(user)
+        if getattr(user, "is_superuser", False):
+            return
         if getattr(user, "is_staff", False):
             raise ValidationError(
-                "Стандартная админка доступна только staff-пользователям.",
+                "Для staff используйте стандартную /admin/.",
                 code="invalid_login",
             )
         if not hasattr(user, "organizer_profile"):
@@ -74,8 +76,13 @@ class OrganizerAdminSite(UnfoldAdminSite):
         return bool(
             user
             and user.is_authenticated
-            and not getattr(user, "is_staff", False)
-            and hasattr(user, "organizer_profile")
+            and (
+                getattr(user, "is_superuser", False)
+                or (
+                    not getattr(user, "is_staff", False)
+                    and hasattr(user, "organizer_profile")
+                )
+            )
         )
 
     def get_urls(self):
@@ -108,7 +115,24 @@ class OrganizerAccessMixin:
             and hasattr(user, "organizer_profile")
         )
 
+    @staticmethod
+    def _has_panel_access(request: HttpRequest) -> bool:
+        user = request.user
+        return bool(
+            user
+            and user.is_authenticated
+            and (
+                getattr(user, "is_superuser", False)
+                or (
+                    not getattr(user, "is_staff", False)
+                    and hasattr(user, "organizer_profile")
+                )
+            )
+        )
+
     def _obj_belongs_to_user(self, obj, user) -> bool:
+        if getattr(user, "is_superuser", False):
+            return True
         current = obj
         for part in self.owner_lookup.split("__"):
             current = getattr(current, part, None)
@@ -117,23 +141,23 @@ class OrganizerAccessMixin:
         return current == user
 
     def has_module_permission(self, request: HttpRequest) -> bool:
-        return self._is_organizer_user(request)
+        return self._has_panel_access(request)
 
     def has_view_permission(self, request: HttpRequest, obj=None) -> bool:
-        if not self._is_organizer_user(request):
+        if not self._has_panel_access(request):
             return False
         return obj is None or self._obj_belongs_to_user(obj, request.user)
 
     def has_change_permission(self, request: HttpRequest, obj=None) -> bool:
-        if not self._is_organizer_user(request):
+        if not self._has_panel_access(request):
             return False
         return obj is None or self._obj_belongs_to_user(obj, request.user)
 
     def has_add_permission(self, request: HttpRequest) -> bool:
-        return self._is_organizer_user(request)
+        return self._has_panel_access(request)
 
     def has_delete_permission(self, request: HttpRequest, obj=None) -> bool:
-        if not self._is_organizer_user(request):
+        if not self._has_panel_access(request):
             return False
         return obj is None or self._obj_belongs_to_user(obj, request.user)
 

@@ -174,7 +174,7 @@ CELERY_BEAT_SCHEDULE = {
 # =============================================================================
 STORAGES = {
     "default": {
-        "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+        "BACKEND": "apps.api.storage.PublicMinioStorage",
     },
     "staticfiles": {
         "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
@@ -182,8 +182,7 @@ STORAGES = {
 }
 AWS_STORAGE_BUCKET_NAME = config("MINIO_BUCKET", default="menu-images")
 AWS_S3_ENDPOINT_URL = config("MINIO_URL", default="http://localhost:9000")
-AWS_S3_CUSTOM_DOMAIN = config("MINIO_STORAGE_USE_DOMAIN", default=None)
-AWS_S3_URL_PROTOCOL = config("MINIO_URL_PROTOCOL", default="http")
+MINIO_PUBLIC_URL = config("MINIO_PUBLIC_URL", default=None)
 AWS_ACCESS_KEY_ID = config("MINIO_USER", default="minioadmin")
 AWS_SECRET_ACCESS_KEY = config("MINIO_PASSWORD", default="minioadmin")
 AWS_S3_FILE_OVERWRITE = False

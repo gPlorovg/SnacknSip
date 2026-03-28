@@ -2,15 +2,18 @@
 Django settings — base configuration.
 """
 
+from importlib.util import find_spec
 from pathlib import Path
 
-from decouple import Csv, config
+from decouple import config
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
+HAS_UNFOLD = find_spec("unfold") is not None
 
 SECRET_KEY = config("SECRET_KEY")
 DEBUG = config("DEBUG", default=False, cast=bool)
-ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="localhost", cast=Csv())
+_CORS_RAW = config("CORS_ALLOWED_ORIGINS", default="")
+CORS_ALLOWED_ORIGINS = [origin for origin in _CORS_RAW.split(",") if origin]
 
 # Application definition
 DJANGO_APPS = [
@@ -21,6 +24,8 @@ DJANGO_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
 ]
+if HAS_UNFOLD:
+    DJANGO_APPS.insert(0, "unfold")
 
 THIRD_PARTY_APPS = [
     "rest_framework",
@@ -48,7 +53,6 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', default='').split(',')
 
 ROOT_URLCONF = "config.urls"
 

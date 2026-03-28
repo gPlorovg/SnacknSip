@@ -7,9 +7,11 @@ from drf_spectacular.views import (
     SpectacularRedocView,
     SpectacularSwaggerView,
 )
+from apps.api.admin.organizer import organizer_admin_site
 
 urlpatterns = [
     path("admin/", admin.site.urls),
+    path("organizer-admin/", organizer_admin_site.urls),
     # API docs
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path(

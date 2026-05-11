@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import {
   Accordion,
   AccordionItem,
@@ -11,6 +11,7 @@ import {
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api/apiFetch";
+import { resolvedEventCode } from "@/lib/eventRoute";
 
 // Типы
 interface Stall {
@@ -56,6 +57,11 @@ interface Order {
 
 export default function StaffStallPage() {
   const router = useRouter();
+  const params = useParams();
+  const eventCode = resolvedEventCode(
+    params?.event_code as string | string[] | undefined,
+  );
+
   const [stall, setStall] = useState<Stall | null>(null);
   const [menu, setMenu] = useState<MenuItem[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
@@ -69,6 +75,27 @@ export default function StaffStallPage() {
 
   useEffect(() => {
     let isMounted = true;
+
+    if (!eventCode) {
+      return () => {
+        isMounted = false;
+      };
+    }
+
+    const rawUser = localStorage.getItem("user");
+    if (rawUser) {
+      try {
+        const u = JSON.parse(rawUser) as { role?: string };
+        if (u.role === "guest") {
+          router.replace(`/event/${eventCode}/guest`);
+          return () => {
+            isMounted = false;
+          };
+        }
+      } catch {
+        /* ignore */
+      }
+    }
 
     const loadData = async () => {
       setLoading(true);
@@ -130,7 +157,7 @@ export default function StaffStallPage() {
       isMounted = false;
       if (pollingRef.current) clearInterval(pollingRef.current);
     };
-  }, []);
+  }, [eventCode, router]);
 
   const handleOpenStall = async () => {
     const res = await apiFetch("/api/staff/stall/open/", { method: "POST" });

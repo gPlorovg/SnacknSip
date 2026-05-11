@@ -7,6 +7,7 @@ type RefreshResult = {
 
 let refreshPromise: Promise<RefreshResult> | null = null;
 const SOFT_RETRY_DELAY_MS = 400;
+const REFRESH_LOCK_NAME = "snacknsip-jwt-refresh";
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -66,6 +67,34 @@ async function refreshAccessToken(refreshToken: string): Promise<RefreshResult> 
   return { accessToken: data.access, shouldLogout: false };
 }
 
+/**
+ * Сериализует refresh между вкладками: при ROTATE_REFRESH_TOKENS второй параллельный
+ * refresh с тем же refresh-токеном попадает в blacklist и даёт 401.
+ */
+async function coordinatedRefresh(): Promise<RefreshResult> {
+  const run = async (): Promise<RefreshResult> => {
+    const rt = localStorage.getItem("refreshToken");
+    if (!rt) {
+      return { accessToken: null, shouldLogout: true };
+    }
+    return refreshAccessToken(rt);
+  };
+
+  if (typeof navigator !== "undefined" && navigator.locks?.request) {
+    return navigator.locks.request(REFRESH_LOCK_NAME, run);
+  }
+  return run();
+}
+
+function forceLogoutToEvent() {
+  localStorage.removeItem("accessToken");
+  localStorage.removeItem("refreshToken");
+  localStorage.removeItem("user");
+  localStorage.removeItem("event");
+  localStorage.removeItem("event_name");
+  window.location.href = "/event";
+}
+
 export async function apiFetch(endpoint: string, options: RequestInit = {}) {
   const accessToken = localStorage.getItem("accessToken");
   const refreshToken = localStorage.getItem("refreshToken");
@@ -89,16 +118,14 @@ export async function apiFetch(endpoint: string, options: RequestInit = {}) {
   if (response.status === 401 && refreshToken) {
     try {
       if (!refreshPromise) {
-        refreshPromise = refreshAccessToken(refreshToken).finally(() => {
+        refreshPromise = coordinatedRefresh().finally(() => {
           refreshPromise = null;
         });
       }
 
       const { accessToken: newAccessToken, shouldLogout } = await refreshPromise;
       if (shouldLogout || !newAccessToken) {
-        localStorage.removeItem("accessToken");
-        localStorage.removeItem("refreshToken");
-        window.location.href = "/event";
+        forceLogoutToEvent();
         throw new Error("Refresh token expired");
       }
 
@@ -115,6 +142,11 @@ export async function apiFetch(endpoint: string, options: RequestInit = {}) {
         },
         canSoftRetry,
       );
+
+      if (response.status === 401) {
+        forceLogoutToEvent();
+        throw new Error("Unauthorized after refresh");
+      }
     } catch (error) {
       throw error;
     }

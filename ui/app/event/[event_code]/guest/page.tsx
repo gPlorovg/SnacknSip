@@ -11,6 +11,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { apiFetch } from "@/lib/api/apiFetch";
+import { resolvedEventCode } from "@/lib/eventRoute";
 
 interface OrderItem {
   id: number;
@@ -111,7 +112,9 @@ const fetchStalls = async (): Promise<Stall[]> => {
 export default function GuestEventPage() {
   const router = useRouter();
   const params = useParams();
-  const eventCode = params?.event_code || "";
+  const eventCode = resolvedEventCode(
+    params?.event_code as string | string[] | undefined,
+  );
 
   const [eventName, setEventName] = useState("");
   const [orders, setOrders] = useState<Order[]>([]);
@@ -124,6 +127,23 @@ export default function GuestEventPage() {
   const prevOrderStatuses = useRef<Record<number, string>>({});
 
   useEffect(() => {
+    if (!eventCode) {
+      return;
+    }
+
+    const rawUser = localStorage.getItem("user");
+    if (rawUser) {
+      try {
+        const u = JSON.parse(rawUser) as { role?: string };
+        if (u.role === "staff") {
+          router.replace(`/event/${eventCode}/staff`);
+          return;
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+
     const storedEventName = localStorage.getItem("event_name");
     if (storedEventName) setEventName(storedEventName);
 
@@ -195,7 +215,7 @@ export default function GuestEventPage() {
     }, 5000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [eventCode, router]);
 
   const activeOrders = orders.filter(
     o => o.status === "created" || o.status === "preparing" || o.status === "ready" || o.status === "modified"

@@ -202,14 +202,11 @@ const ORDER_TRANSITIONS: Record<string, string[]> = {
     });
 
     if (res.ok) {
-        setOrders(prev =>
-        prev
-            .map(o =>
-            o.id === orderId ? { ...o, status: newStatus, cancel_note: cancelNote } : o
-            )
-            // удаляем заказ, если он достиг конечного состояния
-            .filter(o => !["completed", "cancelled"].includes(o.status))
-        );
+      const updatedOrder = (await res.json()) as Order;
+      setOrders((prev) => {
+        const next = prev.map((o) => (o.id === orderId ? updatedOrder : o));
+        return next.filter((o) => !["completed", "cancelled"].includes(o.status));
+      });
     }
     };
 

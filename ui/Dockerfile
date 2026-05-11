@@ -7,7 +7,10 @@ FROM node:22-alpine AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-# Важно: переменные окружения для билда (если есть) должны быть здесь
+ARG NEXT_PUBLIC_API_BASE=
+ENV NEXT_PUBLIC_API_BASE=$NEXT_PUBLIC_API_BASE
+ARG API_PROXY_TARGET=http://web:8000
+ENV API_PROXY_TARGET=$API_PROXY_TARGET
 RUN npm run build
 
 FROM node:22-alpine AS runner

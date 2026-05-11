@@ -1,52 +1,121 @@
 import { API_BASE } from "@/lib/config";
 
+type RefreshResult = {
+  accessToken: string | null;
+  shouldLogout: boolean;
+};
+
+let refreshPromise: Promise<RefreshResult> | null = null;
+const SOFT_RETRY_DELAY_MS = 400;
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isIdempotentMethod(method: string | undefined) {
+  const normalized = (method ?? "GET").toUpperCase();
+  return normalized === "GET" || normalized === "HEAD";
+}
+
+async function fetchWithSoftRetry(
+  url: string,
+  init: RequestInit,
+  canRetry: boolean,
+): Promise<Response> {
+  try {
+    const response = await fetch(url, init);
+
+    if (canRetry && response.status >= 500) {
+      await sleep(SOFT_RETRY_DELAY_MS);
+      return fetch(url, init);
+    }
+
+    return response;
+  } catch (error) {
+    if (!canRetry) {
+      throw error;
+    }
+    await sleep(SOFT_RETRY_DELAY_MS);
+    return fetch(url, init);
+  }
+}
+
+async function refreshAccessToken(refreshToken: string): Promise<RefreshResult> {
+  const refreshResponse = await fetch(`${API_BASE}/api/auth/refresh/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ refresh: refreshToken }),
+  });
+
+  if (!refreshResponse.ok) {
+    if (refreshResponse.status === 401 || refreshResponse.status === 400) {
+      return { accessToken: null, shouldLogout: true };
+    }
+    throw new Error("Failed to refresh access token");
+  }
+
+  const data = (await refreshResponse.json()) as { access?: string; refresh?: string };
+  if (!data.access) {
+    throw new Error("Refresh endpoint returned empty access token");
+  }
+
+  localStorage.setItem("accessToken", data.access);
+  if (data.refresh) {
+    localStorage.setItem("refreshToken", data.refresh);
+  }
+  return { accessToken: data.access, shouldLogout: false };
+}
+
 export async function apiFetch(endpoint: string, options: RequestInit = {}) {
   const accessToken = localStorage.getItem("accessToken");
   const refreshToken = localStorage.getItem("refreshToken");
+  const canSoftRetry = isIdempotentMethod(options.method);
 
-  const headers = {
+  const headers: HeadersInit = {
     "Content-Type": "application/json",
     ...options.headers,
-    Authorization: accessToken ? `Bearer ${accessToken}` : "",
+    ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
   };
 
-  let response = await fetch(`${API_BASE}${endpoint}`, {
-    ...options,
-    headers,
-  });
+  let response = await fetchWithSoftRetry(
+    `${API_BASE}${endpoint}`,
+    {
+      ...options,
+      headers,
+    },
+    canSoftRetry,
+  );
 
-  // Если access токен протух
   if (response.status === 401 && refreshToken) {
     try {
-      // Обновление токена через API
-      const refreshResponse = await fetch(`${API_BASE}/api/auth/refresh/`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ refresh: refreshToken }),
-      });
+      if (!refreshPromise) {
+        refreshPromise = refreshAccessToken(refreshToken).finally(() => {
+          refreshPromise = null;
+        });
+      }
 
-      if (!refreshResponse.ok) {
+      const { accessToken: newAccessToken, shouldLogout } = await refreshPromise;
+      if (shouldLogout || !newAccessToken) {
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("refreshToken");
+        window.location.href = "/event";
         throw new Error("Refresh token expired");
       }
 
-      const data = await refreshResponse.json();
-      localStorage.setItem("accessToken", data.access);
-
-      // Повторяем исходный запрос с новым токеном
       const retryHeaders = {
         ...headers,
-        Authorization: `Bearer ${data.access}`,
+        Authorization: `Bearer ${newAccessToken}`,
       };
 
-      response = await fetch(`${API_BASE}${endpoint}`, {
-        ...options,
-        headers: retryHeaders,
-      });
+      response = await fetchWithSoftRetry(
+        `${API_BASE}${endpoint}`,
+        {
+          ...options,
+          headers: retryHeaders,
+        },
+        canSoftRetry,
+      );
     } catch (error) {
-      // refresh тоже протух → разлогиниваем
-      localStorage.removeItem("accessToken");
-      localStorage.removeItem("refreshToken");
-      window.location.href = "/login";
       throw error;
     }
   }

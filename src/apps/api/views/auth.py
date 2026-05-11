@@ -9,6 +9,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.views import TokenRefreshView as SimpleJWTRefreshView
 
 from apps.api.serializers.auth import LoginSerializer, TelegramLoginSerializer
 
@@ -58,6 +59,10 @@ class _TokenResponseSerializer(drf_serializers.Serializer):
 
 class _RefreshResponseSerializer(drf_serializers.Serializer):
     access = drf_serializers.CharField()
+    refresh = drf_serializers.CharField(
+        required=False,
+        help_text="Новый refresh при ROTATE_REFRESH_TOKENS — клиент должен сохранить.",
+    )
 
 
 class _RefreshRequestSerializer(drf_serializers.Serializer):
@@ -166,27 +171,17 @@ class TelegramLoginView(APIView):
 @extend_schema(
     tags=["Auth"],
     summary="Обновить access token",
+    description=(
+        "При ROTATE_REFRESH_TOKENS в ответе может быть новый refresh — сохраните его; "
+        "старый refresh после ротации попадает в blacklist."
+    ),
     request=_RefreshRequestSerializer,
     responses={200: _RefreshResponseSerializer},
 )
-class RefreshView(APIView):
-    permission_classes = [AllowAny]
+class RefreshView(SimpleJWTRefreshView):
+    """Стандартный refresh SimpleJWT (ротация + blacklist совместимы с настройками)."""
 
-    def post(self, request):
-        refresh_token = request.data.get("refresh")
-        if not refresh_token:
-            return Response(
-                {"detail": "Refresh token is required."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        try:
-            token = RefreshToken(refresh_token)
-            return Response(
-                {"access": str(token.access_token)},
-                status=status.HTTP_200_OK,
-            )
-        except TokenError as e:
-            return Response({"detail": str(e)}, status=status.HTTP_401_UNAUTHORIZED)
+    permission_classes = [AllowAny]
 
 
 @extend_schema(

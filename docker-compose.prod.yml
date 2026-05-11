@@ -65,6 +65,9 @@ services:
     build:
       context: ./ui
       dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_BASE: ${NEXT_PUBLIC_API_BASE}
+        API_PROXY_TARGET: ${API_PROXY_TARGET:-http://web:8000}
     restart: always
     env_file:
       - .env.prod

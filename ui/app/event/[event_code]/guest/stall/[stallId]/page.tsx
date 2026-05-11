@@ -38,7 +38,7 @@ export default function StallPage() {
     const loadStall = async () => {
       setLoading(true);
       try {
-        const res = await apiFetch(`/api/stalls/${stallId}`);
+        const res = await apiFetch(`/api/stalls/${stallId}/`);
         if (!res.ok) throw new Error("Ошибка загрузки точки выдачи");
         const data = await res.json();
         setStall(data);

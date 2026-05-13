@@ -1,4 +1,10 @@
 import { API_BASE } from "@/lib/config";
+import {
+  clearSession,
+  getAccessToken,
+  getRefreshToken,
+  setTokens,
+} from "@/lib/sessionAuth";
 
 type RefreshResult = {
   accessToken: string | null;
@@ -60,20 +66,16 @@ async function refreshAccessToken(refreshToken: string): Promise<RefreshResult> 
     throw new Error("Refresh endpoint returned empty access token");
   }
 
-  localStorage.setItem("accessToken", data.access);
-  if (data.refresh) {
-    localStorage.setItem("refreshToken", data.refresh);
-  }
+  setTokens(data.access, data.refresh);
   return { accessToken: data.access, shouldLogout: false };
 }
 
 /**
- * Сериализует refresh между вкладками: при ROTATE_REFRESH_TOKENS второй параллельный
- * refresh с тем же refresh-токеном попадает в blacklist и даёт 401.
+ * Сериализует параллельные refresh внутри вкладки (и при общем lock между вкладками — безопасно).
  */
 async function coordinatedRefresh(): Promise<RefreshResult> {
   const run = async (): Promise<RefreshResult> => {
-    const rt = localStorage.getItem("refreshToken");
+    const rt = getRefreshToken();
     if (!rt) {
       return { accessToken: null, shouldLogout: true };
     }
@@ -87,17 +89,13 @@ async function coordinatedRefresh(): Promise<RefreshResult> {
 }
 
 function forceLogoutToEvent() {
-  localStorage.removeItem("accessToken");
-  localStorage.removeItem("refreshToken");
-  localStorage.removeItem("user");
-  localStorage.removeItem("event");
-  localStorage.removeItem("event_name");
+  clearSession();
   window.location.href = "/event";
 }
 
 export async function apiFetch(endpoint: string, options: RequestInit = {}) {
-  const accessToken = localStorage.getItem("accessToken");
-  const refreshToken = localStorage.getItem("refreshToken");
+  const accessToken = getAccessToken();
+  const refreshToken = getRefreshToken();
   const canSoftRetry = isIdempotentMethod(options.method);
 
   const headers: HeadersInit = {

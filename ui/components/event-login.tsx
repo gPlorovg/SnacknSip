@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { API_BASE } from "@/lib/config";
+import { setSessionAfterLogin } from "@/lib/sessionAuth";
 
 interface LoginResponse {
   access: string;
@@ -66,10 +67,13 @@ export default function EventLogin({ initialEventCode = "" }: { initialEventCode
 
       const data: LoginResponse = await res.json();
 
-      localStorage.setItem("accessToken", data.access);
-      localStorage.setItem("refreshToken", data.refresh);
-      localStorage.setItem("user", JSON.stringify(data.user));
-      localStorage.setItem("event", JSON.stringify(data.event));
+      setSessionAfterLogin({
+        access: data.access,
+        refresh: data.refresh,
+        user: data.user,
+        event: data.event,
+        eventName: data.event.name,
+      });
 
       if (data.user.role === "staff") {
         router.push(`/event/${data.event.code}/staff`);

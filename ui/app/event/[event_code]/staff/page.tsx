@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/dialog";
 import { apiFetch } from "@/lib/api/apiFetch";
 import { resolvedEventCode } from "@/lib/eventRoute";
+import { getUserJson } from "@/lib/sessionAuth";
 
 interface Stall {
   id: number;
@@ -255,7 +256,7 @@ export default function StaffStallPage() {
       };
     }
 
-    const rawUser = localStorage.getItem("user");
+    const rawUser = getUserJson();
     if (rawUser) {
       try {
         const u = JSON.parse(rawUser) as { role?: string };

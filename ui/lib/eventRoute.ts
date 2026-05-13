@@ -7,10 +7,12 @@ export function routeEventCode(
   return (v ?? "").trim();
 }
 
-/** Код мероприятия из ответа логина, пока Next ещё не отдал params. */
+import { getEventJson } from "@/lib/sessionAuth";
+
+/** Код мероприятия из ответа логина (вкладка), пока Next ещё не отдал params. */
 export function storedEventCode(): string {
-  if (typeof localStorage === "undefined") return "";
-  const raw = localStorage.getItem("event");
+  if (typeof window === "undefined") return "";
+  const raw = getEventJson();
   if (!raw) return "";
   try {
     return ((JSON.parse(raw) as { code?: string }).code ?? "").trim();

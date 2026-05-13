@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/accordion";
 import { apiFetch } from "@/lib/api/apiFetch";
 import { resolvedEventCode } from "@/lib/eventRoute";
+import { getEventName, getUserJson } from "@/lib/sessionAuth";
 
 interface OrderItem {
   id: number;
@@ -131,7 +132,7 @@ export default function GuestEventPage() {
       return;
     }
 
-    const rawUser = localStorage.getItem("user");
+    const rawUser = getUserJson();
     if (rawUser) {
       try {
         const u = JSON.parse(rawUser) as { role?: string };
@@ -144,7 +145,7 @@ export default function GuestEventPage() {
       }
     }
 
-    const storedEventName = localStorage.getItem("event_name");
+    const storedEventName = getEventName();
     if (storedEventName) setEventName(storedEventName);
 
     const loadOrders = async () => {

@@ -5,16 +5,58 @@ from decouple import config
 from .base import *  # noqa: F403
 from .base import REST_FRAMEWORK
 
+
+def _parse_allowed_hosts(raw: str) -> list[str]:
+    hosts: list[str] = []
+    for item in raw.split(","):
+        host = item.strip().strip("\"'").rstrip(".")
+        if host:
+            hosts.append(host)
+    return hosts
+
+
+# Fail-safe for production: never allow empty ALLOWED_HOSTS.
+if not ALLOWED_HOSTS:  # noqa: F405
+    ALLOWED_HOSTS = _parse_allowed_hosts(  # noqa: F405
+        config(
+            "ALLOWED_HOSTS",
+            default="127.0.0.1,localhost,snacknsip.ru,www.snacknsip.ru",
+        )
+    )
+
 # Строго выключаем DEBUG
 DEBUG = config("DEBUG", default=False, cast=bool)
 
+# Toggle for deployments behind real HTTPS termination.
+# If site is served only via http://, set USE_HTTPS=false in .env.prod.
+USE_HTTPS = config("USE_HTTPS", default=False, cast=bool)
+
+# Разрешаем домен для CSRF
+CSRF_TRUSTED_ORIGINS = [
+    "https://snacknsip.ru",
+    "https://www.snacknsip.ru",
+]
+if not USE_HTTPS:
+    CSRF_TRUSTED_ORIGINS += [
+        "http://snacknsip.ru",
+        "http://www.snacknsip.ru",
+    ]
+CSRF_COOKIE_SAMESITE = "Lax"
+
 # Настройки безопасности за прокси (Nginx)
-SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
-SESSION_COOKIE_SECURE = True
-CSRF_COOKIE_SECURE = True
-SECURE_HSTS_SECONDS = 31536000  # 1 год
-SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-SECURE_HSTS_PRELOAD = True
+if USE_HTTPS:
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = 31536000  # 1 год
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+else:
+    SESSION_COOKIE_SECURE = False
+    CSRF_COOKIE_SECURE = False
+    SECURE_HSTS_SECONDS = 0
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = False
+    SECURE_HSTS_PRELOAD = False
 SECURE_CONTENT_TYPE_NOSNIFF = True
 
 # Отключаем browsable API интерфейс в проде

@@ -2,15 +2,31 @@
 Django settings — base configuration.
 """
 
+from importlib.util import find_spec
 from pathlib import Path
 
-from decouple import Csv, config
+from decouple import config
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
+HAS_UNFOLD = find_spec("unfold") is not None
+
+
+def _parse_allowed_hosts(raw: str) -> list[str]:
+    hosts: list[str] = []
+    for item in raw.split(","):
+        host = item.strip().strip("\"'").rstrip(".")
+        if host:
+            hosts.append(host)
+    return hosts
+
 
 SECRET_KEY = config("SECRET_KEY")
 DEBUG = config("DEBUG", default=False, cast=bool)
-ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="localhost", cast=Csv())
+ALLOWED_HOSTS = _parse_allowed_hosts(
+    config("ALLOWED_HOSTS", default="localhost,127.0.0.1")
+)
+_CORS_RAW = config("CORS_ALLOWED_ORIGINS", default="")
+CORS_ALLOWED_ORIGINS = [origin for origin in _CORS_RAW.split(",") if origin]
 
 # Application definition
 DJANGO_APPS = [
@@ -28,6 +44,8 @@ THIRD_PARTY_APPS = [
     "rest_framework_simplejwt.token_blacklist",
     "drf_spectacular",
     "storages",
+    "corsheaders",
+    *(["unfold.apps.BasicAppConfig"] if HAS_UNFOLD else []),
 ]
 
 LOCAL_APPS = [
@@ -37,6 +55,7 @@ LOCAL_APPS = [
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 
 MIDDLEWARE = [
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -45,6 +64,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
+
 
 ROOT_URLCONF = "config.urls"
 
@@ -154,7 +174,7 @@ CELERY_BEAT_SCHEDULE = {
 # =============================================================================
 STORAGES = {
     "default": {
-        "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+        "BACKEND": "apps.api.storage.PublicMinioStorage",
     },
     "staticfiles": {
         "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
@@ -162,6 +182,9 @@ STORAGES = {
 }
 AWS_STORAGE_BUCKET_NAME = config("MINIO_BUCKET", default="menu-images")
 AWS_S3_ENDPOINT_URL = config("MINIO_URL", default="http://localhost:9000")
+# Path-style: https://endpoint/bucket/key — совпадает с location ^~ /menu-images/ в nginx.
+AWS_S3_ADDRESSING_STYLE = "path"
+MINIO_PUBLIC_URL = config("MINIO_PUBLIC_URL", default=None)
 AWS_ACCESS_KEY_ID = config("MINIO_USER", default="minioadmin")
 AWS_SECRET_ACCESS_KEY = config("MINIO_PASSWORD", default="minioadmin")
 AWS_S3_FILE_OVERWRITE = False

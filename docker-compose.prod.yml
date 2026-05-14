@@ -51,15 +51,33 @@ services:
       - DJANGO_SETTINGS_MODULE=config.settings.prod
       - DB_HOST=db
       - REDIS_URL=redis://redis:6379/0
-      - MINIO_URL=http://minio:9000
+      - MINIO_URL=${MINIO_URL:-http://minio:9000}
     volumes:
       - static_volume:/app/staticfiles
-    ports:
-      - "8000:8000"
+    expose:
+      - "8000"
     depends_on:
       - db
       - redis
     command: ["/app/entrypoint.sh", "gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "3"]
+
+  ui:
+    build:
+      context: ./ui
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_BASE: ${NEXT_PUBLIC_API_BASE}
+        API_PROXY_TARGET: ${API_PROXY_TARGET:-http://web:8000}
+    restart: always
+    env_file:
+      - .env.prod
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+    expose:
+      - "3000"
+    depends_on:
+      - web
 
   worker:
     build:
@@ -71,7 +89,7 @@ services:
       - DJANGO_SETTINGS_MODULE=config.settings.prod
       - DB_HOST=db
       - REDIS_URL=redis://redis:6379/0
-      - MINIO_URL=http://minio:9000
+      - MINIO_URL=${MINIO_URL:-http://minio:9000}
     depends_on:
       - db
       - redis
@@ -102,6 +120,8 @@ services:
       - "80:80"
     depends_on:
       - web
+      - ui
+      - minio
 
 volumes:
   postgres_prod_data:

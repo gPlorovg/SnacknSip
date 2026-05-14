@@ -1,5 +1,6 @@
 """API URL routing."""
 
+from django.http import JsonResponse
 from django.urls import path
 
 from apps.api.views.auth import LoginView, LogoutView, RefreshView, TelegramLoginView
@@ -18,6 +19,7 @@ from apps.api.views.organizer import (
     CloseEventView,
     EventDetailView,
     EventListView,
+    EventQrView,
     OpenEventView,
     OrgGuestRoleItemView,
     OrgGuestRoleListView,
@@ -43,7 +45,21 @@ from apps.api.views.staff import (
     UpdateOrderStatusView,
 )
 
+
+def api_root(_request):
+    return JsonResponse(
+        {
+            "service": "SnacknSip API",
+            "docs": "/api/docs/",
+            "schema": "/api/schema/",
+            "redoc": "/api/redoc/",
+            "auth_login": "/api/auth/login/",
+        }
+    )
+
+
 urlpatterns = [
+    path("", api_root, name="api-root"),
     # ── Auth ─────────────────────────────────────────────────
     path("auth/login/", LoginView.as_view(), name="auth-login"),
     path("auth/telegram/", TelegramLoginView.as_view(), name="auth-telegram"),
@@ -98,6 +114,17 @@ urlpatterns = [
         "staff/orders/cancel-all/",
         BulkCancelOrdersView.as_view(),
         name="staff-bulk-cancel",
+    ),
+    # ── Organizer: QR Codes ───────────────────────────────────
+    path(
+        "organizer/events/<str:code>/qr/",
+        EventQrView.as_view(),
+        name="organizer-event-qr",
+    ),
+    path(
+        "org/events/<str:code>/qr/",
+        EventQrView.as_view(),
+        name="org-event-qr",
     ),
     # ── Organizer: Events ─────────────────────────────────────
     path("org/events/", EventListView.as_view(), name="org-event-list"),

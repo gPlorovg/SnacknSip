@@ -1,0 +1,18 @@
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+  <h1>{{ title }}</h1>
+
+  <p>Для каждой выбранной позиции загрузите отдельный файл в том же количестве.</p>
+  <ul>
+    {% for item in items %}
+      <li>{{ item.name }} ({{ item.menu.name }} / {{ item.menu.event.code }})</li>
+    {% endfor %}
+  </ul>
+
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" class="default">Сохранить изображения</button>
+  </form>
+{% endblock %}

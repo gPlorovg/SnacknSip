@@ -39,8 +39,12 @@ class StallMenuItemInline(admin.TabularInline):
 
 @admin.register(OrganizerProfile)
 class OrganizerProfileAdmin(admin.ModelAdmin):
-    list_display = ("user", "user__email")
-    raw_id_fields = ("user",)
+    list_display = ("user", "user_email")
+    search_fields = ("user__username", "user__email")
+
+    @admin.display(description="Email")
+    def user_email(self, obj: OrganizerProfile) -> str:
+        return obj.user.email
 
 
 @admin.register(EventUser)

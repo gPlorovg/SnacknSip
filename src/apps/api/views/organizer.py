@@ -1,6 +1,10 @@
 """Organizer-facing API views."""
 
-from drf_spectacular.utils import extend_schema
+from io import BytesIO
+
+import qrcode
+from django.http import HttpResponse
+from drf_spectacular.utils import OpenApiExample, OpenApiParameter, extend_schema
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -9,7 +13,6 @@ from apps.api.auth.permissions import IsOrganizer
 from apps.api.models import Event, EventGuest, Menu, MenuItem, Order, Stall
 from apps.api.models.guest_roles import GuestRole, GuestRoleItem
 from apps.api.models.users import EventUser
-from drf_spectacular.utils import OpenApiExample
 from apps.api.serializers.organizer import (
     AssignRoleSerializer,
     BlockUserSerializer,
@@ -34,6 +37,14 @@ def _get_event(request, event_id):
     """Return an event owned by the organizer."""
     try:
         return Event.objects.get(pk=event_id, organizer=request.user)
+    except Event.DoesNotExist:
+        return None
+
+
+def _get_event_by_code(request, code: str) -> Event | None:
+    """Return an event by code owned by the organizer."""
+    try:
+        return Event.objects.get(code=code.upper(), organizer=request.user)
     except Event.DoesNotExist:
         return None
 
@@ -196,6 +207,52 @@ class CloseEventView(APIView):
             return Response({"detail": "Не найдено."}, status=status.HTTP_404_NOT_FOUND)
         event.close()
         return Response(EventSerializer(event).data)
+
+
+@extend_schema(
+    tags=["Organizer — Events"],
+    summary="QR мероприятия по коду",
+    parameters=[
+        OpenApiParameter(
+            name="target",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            required=True,
+            enum=["tg", "web"],
+            description="tg -> deeplink Telegram, web -> deeplink сайта",
+        )
+    ],
+    responses={200: {"content": {"image/png": {}}}},
+)
+class EventQrView(APIView):
+    permission_classes = [IsOrganizer]
+
+    def get(self, request, code: str):
+        event = _get_event_by_code(request, code)
+        if not event:
+            return Response(
+                {"detail": "Мероприятие не найдено."}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        target = request.query_params.get("target", "").lower()
+        if target not in {"tg", "web"}:
+            return Response(
+                {"detail": "Параметр target должен быть tg или web."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        deeplink = event.deeplink_tg if target == "tg" else event.deeplink_web
+        qr_image = qrcode.make(deeplink)
+
+        buffer = BytesIO()
+        qr_image.save(buffer, format="PNG")
+        buffer.seek(0)
+
+        response = HttpResponse(buffer.getvalue(), content_type="image/png")
+        response["Content-Disposition"] = (
+            f'inline; filename="event-{event.code}-{target}-qr.png"'
+        )
+        return response
 
 
 # ─────────────────────────────────────────────────────

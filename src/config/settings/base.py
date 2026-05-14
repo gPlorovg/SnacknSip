@@ -182,6 +182,8 @@ STORAGES = {
 }
 AWS_STORAGE_BUCKET_NAME = config("MINIO_BUCKET", default="menu-images")
 AWS_S3_ENDPOINT_URL = config("MINIO_URL", default="http://localhost:9000")
+# Path-style: https://endpoint/bucket/key — совпадает с location ^~ /menu-images/ в nginx.
+AWS_S3_ADDRESSING_STYLE = "path"
 MINIO_PUBLIC_URL = config("MINIO_PUBLIC_URL", default=None)
 AWS_ACCESS_KEY_ID = config("MINIO_USER", default="minioadmin")
 AWS_SECRET_ACCESS_KEY = config("MINIO_PASSWORD", default="minioadmin")

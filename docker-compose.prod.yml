@@ -121,6 +121,7 @@ services:
     depends_on:
       - web
       - ui
+      - minio
 
 volumes:
   postgres_prod_data:

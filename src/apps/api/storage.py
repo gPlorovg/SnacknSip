@@ -8,12 +8,14 @@ class PublicMinioStorage(S3Boto3Storage):
     """
     def url(self, name, parameters=None, expire=None, http_method=None):
         url = super().url(name, parameters, expire, http_method)
-        
+
         # Если задан внешний домен, подменяем внутренний адрес (minio:9000) на внешний
-        internal_url = settings.AWS_S3_ENDPOINT_URL
-        public_url = getattr(settings, "MINIO_PUBLIC_URL", None)
-        
-        if public_url and internal_url in url:
-            return url.replace(internal_url, public_url)
-            
+        internal_url = (settings.AWS_S3_ENDPOINT_URL or "").rstrip("/")
+        public_url = (getattr(settings, "MINIO_PUBLIC_URL", None) or "").rstrip("/")
+
+        if public_url and internal_url:
+            for candidate in (internal_url, internal_url.replace("http://", "https://")):
+                if candidate in url:
+                    return url.replace(candidate, public_url, 1)
+
         return url
